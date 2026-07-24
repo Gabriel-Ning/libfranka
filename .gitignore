@@ -23,3 +23,6 @@ version_info.properties
 pylibfranka/docs/_build/
 pylibfranka/_version.py
 pylibfranka/VERSION
+
+# rattler-build artifacts
+/output/
