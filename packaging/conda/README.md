@@ -4,8 +4,11 @@ This recipe builds **libfranka** for the `gabriel-robotics` Prefix.dev channel
 against the **same dependency ABI** as `physical_ai_runtime`'s Pixi lock:
 
 - `fmt >=12.1.0,<12.2.0a0` → `libfmt.so.12`
-- conda-forge `poco` (not Ubuntu `libPoco*.so.80`)
-- `pinocchio`, `eigen`, `tinyxml2`, `console_bridge`
+- `poco >=1.15.3,<1.15.4.0a0` (not Ubuntu `libPoco*.so.80`)
+- `pinocchio` / `libpinocchio` `>=4.0.0,<4.0.1` → `libpinocchio_*.so.4.0.0`
+  (matches `placo` / `ros-jazzy-pinocchio`; **not** 4.1)
+- `urdfdom >=6.0.0,<6.1.0a0` (not conda-forge libfranka's `.so.5.1`)
+- `tinyxml2 >=11.0.0,<11.1.0a0`, `console_bridge >=1.0.2,<1.1.0a0`, `eigen`
 
 It is **not** a repack of the official `libfranka_*_noble_amd64.deb`. That
 `.deb` needs `libfmt.so.9` / `libPoco*.so.80` and fails to `dlopen` against
@@ -32,7 +35,8 @@ rattler-build build --recipe packaging/conda/recipe.yaml \
 ```
 
 The build script refuses to finish unless `libfranka.so` **NEEDED** contains
-`libfmt.so.12` and does **not** contain `libfmt.so.9` or `libPoco*.so.80`.
+`libfmt.so.12` and `libpinocchio_*.so.4.0.0`, and does **not** contain
+`libfmt.so.9`, `libPoco*.so.80`, pinocchio 4.1, or `liburdfdom_world.so.5`.
 
 ## Upload (separate, credentialed step)
 
@@ -47,14 +51,20 @@ Do not upload until `package_contents` and the ABI `script` tests pass.
 
 This fork tracks upstream **main**; the conda package version is just whatever
 `CMakeLists.txt` currently reports. Exact version pins are optional — ABI
-compatibility (`fmt` 12 / conda `poco`) matters more than matching
-`franka_ros2`'s historical `dependency.repos` tag.
+compatibility (`fmt` 12 / pinocchio 4.0 / conda `poco`) matters more than
+matching `franka_ros2`'s historical `dependency.repos` tag.
 
 ```toml
-# pixi.toml
-libfranka = "*"
-poco = "*"
+# pixi.toml — put gabriel-robotics before conda-forge
+channels = [
+  "robostack-jazzy",
+  "https://prefix.dev/gabriel-robotics",
+  "conda-forge",
+]
+libfranka = { version = "==0.21.2", build = "pixi1_*" }
+poco = ">=1.15.3,<1.15.4"
 ```
 
-Prefer the `gabriel-robotics` channel so this Pixi-built artifact wins over
-any future conda-forge or Ubuntu deb of the same name.
+Prefer `gabriel-robotics` **ahead of** `conda-forge`: conda-forge also ships
+`libfranka 0.21.2` built against `urdfdom` SONAME `.5.1`, which breaks against
+robostack `urdfdom` 6.

@@ -12,9 +12,10 @@ source:
   path: ../..
 
 build:
-  number: 0
-  # Distinguish Pixi/robostack ABI builds from official Ubuntu noble debs.
-  string: pixi0_h${{ hash }}
+  # Bump when host ABI pins change for the same package version.
+  number: 1
+  # pixi{N} tracks ABI lock revisions (N == build number). Hash encodes variant.
+  string: pixi${{ build_number }}_h${{ hash }}
   script: build.sh
 
 requirements:
@@ -24,21 +25,25 @@ requirements:
     - ninja
     - pkg-config
   host:
-    # Pin matches robostack-jazzy / physical_ai_runtime Pixi lock
-    # (fmt >=12.1.0,<12.2.0a0). Official noble .deb uses fmt v9 and is incompatible.
+    # Locked to physical_ai_runtime Pixi (placo / ros-jazzy-pinocchio).
+    # Official noble .deb uses fmt v9 / Poco .80 and is incompatible.
     - fmt >=12.1.0,<12.2.0a0
-    - poco
+    - poco >=1.15.3,<1.15.4.0a0
     - eigen
-    - pinocchio >=4.0.0,<4.2.0a0
-    - tinyxml2
-    - console_bridge
+    - pinocchio >=4.0.0,<4.0.1a0
+    - libpinocchio >=4.0.0,<4.0.1.0a0
+    - tinyxml2 >=11.0.0,<11.1.0a0
+    - console_bridge >=1.0.2,<1.1.0a0
+    - urdfdom >=6.0.0,<6.1.0a0
   run:
     - fmt >=12.1.0,<12.2.0a0
-    - poco
+    - poco >=1.15.3,<1.15.4.0a0
     - eigen
-    - pinocchio >=4.0.0,<4.2.0a0
-    - tinyxml2
-    - console_bridge
+    - pinocchio >=4.0.0,<4.0.1a0
+    - libpinocchio >=4.0.0,<4.0.1.0a0
+    - tinyxml2 >=11.0.0,<11.1.0a0
+    - console_bridge >=1.0.2,<1.1.0a0
+    - urdfdom >=6.0.0,<6.1.0a0
 
 tests:
   - package_contents:
@@ -58,8 +63,11 @@ tests:
       test -f "$PREFIX/lib/cmake/Franka/FrankaConfig.cmake"
       needed="$(readelf -d "$lib" | awk '/NEEDED/ {print $5}' | tr -d '[]')"
       echo "$needed" | grep -qx 'libfmt.so.12'
+      echo "$needed" | grep -Eq 'libpinocchio_(default|parsers)\.so\.4\.0\.0'
       ! echo "$needed" | grep -Eq 'libfmt\.so\.9($|\.)'
       ! echo "$needed" | grep -Eq 'libPoco(Foundation|Net)\.so\.80($|\.)'
+      ! echo "$needed" | grep -Eq 'libpinocchio_.*\.so\.4\.1\.'
+      ! echo "$needed" | grep -Eq 'liburdfdom_world\.so\.5'
       export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
       python - <<'PY'
       import ctypes, glob, os
@@ -80,10 +88,11 @@ about:
   summary: libfranka built against Pixi/robostack fmt 12 and conda-forge Poco
   description: |
     Fork packaging of Franka Robotics libfranka for the gabriel-robotics
-    Prefix.dev channel. Linked against the same fmt 12.1.x / conda-forge Poco /
-    pinocchio ABI used by physical_ai_runtime's Pixi environment. Not ABI
-    compatible with official Ubuntu noble libfranka_*.deb packages (fmt v9,
-    Poco SONAME .80).
+    Prefix.dev channel. Linked against physical_ai_runtime's Pixi ABI:
+    fmt 12.1.x, conda-forge Poco 1.15.3, pinocchio/libpinocchio 4.0.0,
+    urdfdom 6. Not ABI compatible with official Ubuntu noble
+    libfranka_*.deb packages (fmt v9, Poco SONAME .80), nor with
+    pinocchio 4.1 builds.
 
 extra:
   maintainers:

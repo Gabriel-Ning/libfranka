@@ -68,3 +68,16 @@ if grep -Eq 'libPoco(Foundation|Net)\.so\.80($|\.)' <<<"${needed}"; then
   echo "ABI check failed: package must not depend on Ubuntu Poco SONAME .80" >&2
   exit 1
 fi
+if ! grep -Eq 'libpinocchio_(default|parsers)\.so\.4\.0\.0' <<<"${needed}"; then
+  echo "ABI check failed: expected NEEDED libpinocchio_*.so.4.0.0 (physical_ai_runtime)" >&2
+  echo "${needed}" >&2
+  exit 1
+fi
+if grep -Eq 'libpinocchio_.*\.so\.4\.1\.' <<<"${needed}"; then
+  echo "ABI check failed: package must not depend on pinocchio 4.1 SONAME" >&2
+  exit 1
+fi
+if grep -Eq 'liburdfdom_world\.so\.5' <<<"${needed}"; then
+  echo "ABI check failed: expected urdfdom 6 (robostack/Pixi), not SONAME .5" >&2
+  exit 1
+fi
